@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoVolt Nexus - Full-Stack Dashboard</title>
+    <style>
+        :root {
+            --bg-dark: #D8BCAB;
+            --panel-bg: #8B5A2B;
+            --card-bg: #654321;
+            --primary-green:#2A1A0A;
+            --accent-gold:#3d3d3d ;
+            --text-light: #e0e0e0;
+            --text-muted: #aaaaaa;
+            --primary-green:#2A1A0A;
+            --danger-red: brown  ;
+            --border:#654321 ;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 20px; }
+
+        /* Terminal Tab Navigation */
+        .terminal-nav {
+            background: #8B582B; border: 2px solid #8B582B; border-radius: 8px;
+            padding: 10px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .terminal-title { font-family: 'Courier New', monospace; color: black; font-weight: bold; font-size: 0.9rem; }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background:#2A1A0a; color: var(--text-muted); border: 1px solid #444;
+            padding: 8px 16px; cursor: pointer; border-radius: 4px; font-weight: 600; transition: all 0.3s;
+        }
+        .nav-btn.active, .nav-btn:hover { background: var(--primary-green); color: #000; border-color: var(--primary-green); }
+
+        .app-page { display: none; }
+        .app-page.active { display: block; }
+
+        /* Layout Frameworks */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+        .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .card-title { font-size: 1.1rem; color: var(--primary-green); margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+        .metric-box { background: var(--card-bg); border-radius: 8px; padding: 20px; text-align: center; border-left: 4px solid var(--border); }
+        .metric-box.solar { border-left-color: var(--accent-brown); }
+        .metric-box.battery { border-left-color: var(--primary-brown); }
+        .metric-box.load { border-left-color: var(--danger-brown); }
+        .metric-box .val { font-size: 2.2rem; font-weight: bold; margin-top: 10px; }
+
+        .device-row { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+        .btn-switch { background: #444; color: #fff; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .btn-switch.active { background: var(--primary-green); color: #000; }
+        .alert-banner { background: #331c1c; border: 1px solid var(--danger-brown); color: white; padding: 12px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; display: none; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--card-bg); }
+        
+        .live-terminal-log { background: #000; color: white; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 110px; overflow-y: auto; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <div class="terminal-nav">
+        <div class="terminal-title">Smart S E M S  [Pipeline: <span id="currentModeLabel">CONNECTED</span>]</div>
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="switchTab('tab1', this)">1. Home</button>
+            <button class="nav-btn" onclick="switchTab('tab2', this)">2. Prediction</button>
+            <button class="nav-btn" onclick="switchTab('tab3', this)">3. Net Metering</button>
+            <button class="nav-btn" onclick="switchTab('tab4', this)">4. Settings</button>
+            <button class="nav-btn" onclick="switchTab('tab5', this)">5. Help and F&Q</button>
+        </div>
+    </div>
+
+    <div class="alert-banner" id="dustAlert">⚠️ [MAINTENANCE TRIGGERED] Efficiency loss detected on Panel Array via ACS712 current drops. Please clean dust layers!</div>
+
+    <div id="tab1" class="app-page active">
+        <div class="grid-3">
+            <div class="metric-box solar"><h3>Solar Generation</h3><div class="val" id="solarVal">0.00 kW</div><small id="voltsLabel">ZMPT101B: Loading...</small></div>
+            <div class="metric-box battery"><h3>Battery Storage</h3><div class="val" id="batteryVal">0%</div><small></small></div>
+            <div class="metric-box load"><h3>Active Home Load</h3><div class="val" id="loadVal">0.00 kW</div><small id="ampsLabel">ACS712: Loading...</small></div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">Hardware  Contols <span id="profileLabel" style="color:var(--accent-gold);">[Profile - Admin]</span></div>
+                <div class="device-row"><div><strong>EV Port Charger Node</strong></div><button class="btn-switch" id="relay_01" onclick="pressRelay('relay_01')">OFF</button></div>
+                <div class="device-row"><div><strong>Smart Appliance Circuit (Washing Machine)</strong></div><button class="btn-switch" id="relay_02" onclick="pressRelay('relay_02')">OFF</button></div>
+                <div class="device-row"><div><strong>Living Room Air Conditioner Relay</strong></div><button class="btn-switch" id="relay_03" onclick="pressRelay('relay_03')">OFF</button></div>
+                <div class="device-row"><div><strong>Auxiliary Secondary Lights</strong></div><button class="btn-switch" id="relay_04" onclick="pressRelay('relay_04')">OFF</button></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Profile Switches</div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="nav-btn" style="color:#fff;" onclick="setBackendRole('Admin')">Profile: System Administrator (Full Override)</button>
+                    <button class="nav-btn" style="color:#fff;" onclick="setBackendRole('Guest')">Profile: Guest Node (Read Only Layer)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab2" class="app-page">
+        <div class="card">
+            <div class="card-title"> Prediction And records Of Generating Energy</div>
+            <table id="forecastTable">
+                <thead><tr><th>Target Cycle</th><th>Sky Density Matrix</th><th>Predicted Solar Output (Flask Output)</th></tr></thead>
+                <tbody id="forecastBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab3" class="app-page">
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">Net Metering Metrics</div>
+                <div style="display:flex; justify-content:space-around; padding:20px; background-color: #8B5A2B; border-radius:8px;">
+                    <div><h3>Import Grid</h3><h2 id="importUnits" style="color:var(--danger-red);">0 Units</h2></div>
+                    <div><h3>Export Grid</h3><h2 id="exportUnits" style="color:var(--primary-green);">0 Units</h2></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title" >Financial Trade Earnings</div>
+                <div style="text-align:center; padding:20px;">
+                    <p style="color:var(--text-muted);">Net Earnings Current Grid Billing Cycle</p>
+                    <h1 id="netEarningsDisplay" style="color:var(--primary-green); font-size:2.5rem; margin-top:10px;">Rs 0.00</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab4" class="app-page">
+        <div class="card">
+            <div class="card-title"> Structural Access Configuration Dashboard</div>
+            <p style="font-size:0.9rem; color:var(--text-muted);">Settings nodes map direct ESP32 hardware assignments to role clearances.</p>
+        </div>
+    </div>
+
+    <div id="tab5" class="app-page">
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title">For Help And Quiries </div>
+                <p>Support OR Inquiries... <b style="color:var(--accent-gold);">support@ecovolt.nexus</b></p>
+            </div>
+            <div class="card" style="border:2px solid var(--accent-gold); background:#8B5A2B;"
+                <div class="card-title" style="color:var(--accent-gold);"DEMO CONTEXT ENGINE (SOFT DATA SWAP)</div>
+                <p style="font-size:0.85rem; margin-bottom:15px; color:#5FA052;">Toggle this switch to seamlessly hot-swap Flask's ingestion loop from live weather models into local raw hardware parsing pipelines.</p>
+                <button class="nav-btn" style="width:100%; font-size:1rem; background:var(--accent-gold); color:#8B5A2B;" onclick="triggerModeSwap()">HOT SWAP: DATA INGESTION ENGINE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+        <div class="card-title">Local Client Network Request Logs</div>
+        <div class="live-terminal-log" id="termBox">
+            [SYS_CLIENT] Awaiting handshake connections to Flask Core Base Python API Server...
+        </div>
+    </div>
+
+    <script>
+        // 1. NAVIGATION LAYER
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.app-page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            
+            if(tabId === 'tab2') fetchForecastData();
+        }
+
+        // 2. FETCH LIVE DATA LOOP (Pulls from Python Flask every 2 seconds)
+        setInterval(async () => {
+            try {
+                let res = await fetch('http://localhost:5000/api/telemetry');
+                let data = await res.json();
+
+                // Inject UI values dynamically
+                document.getElementById('solarVal').innerText = data.solar;
+                document.getElementById('batteryVal').innerText = data.battery;
+                document.getElementById('loadVal').innerText = data.load;
+                document.getElementById('voltsLabel').innerText = data.voltage;
+                document.getElementById('ampsLabel').innerText = data.current;
+                document.getElementById('importUnits').innerText = data.net_import + " Units";
+                document.getElementById('exportUnits').innerText = data.net_export + " Units";
+                document.getElementById('netEarningsDisplay').innerText = data.net_earnings;
+                
+                // Show Dust alerts based on flask value rules
+                document.getElementById('dustAlert').style.display = data.dust_level > 15 ? 'block' : 'none';
+
+                // Sync device relay buttons switches active classes from backend state array
+                for (let key in data.relays) {
+                    let btn = document.getElementById(key);
+                    if(btn) {
+                        btn.innerText = data.relays[key];
+                        if(data.relays[key] === "ON") btn.classList.add('active');
+                        else btn.classList.remove('active');
+                    }
+                }
+                
+                document.getElementById('currentModeLabel').innerText = data.execution_mode + " PIPELINE ACTIVE";
+            } catch (err) {
+                logConsole("[NETWORK_ERROR] Flask API server offline or unreachable.", "danger");
+            }
+        }, 2000);
+
+        // 3. TRIGGER RELAY COMMAND POST REQUEST
+        async function pressRelay(relayId) {
+            try {
+                let res = await fetch('http://localhost:5000/api/relay/toggle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({"relay_id": relayId})
+                });
+                let data = await res.json();
+                if(data.status === "SUCCESS") {
+                    logConsole(`[API_SUCCESS] Dispatched active pulse command execution loop on ${relayId}. State: ${data.new_state}`, "success");
+                }
+            } catch (err) {
+                alert("🚨 PRIVILEGE OVERRIDE EXCEPTION: Security tier authorization level [GUEST] cannot pulse hardware registers.");
+                logConsole("[SECURITY_DENIED] Authentication credential layer validation failure.", "danger");
+            }
+        }
+
+        // 4. CHANGE ROLE PROFILE
+        async function setBackendRole(roleName) {
+            let res = await fetch('http://localhost:5000/api/system/role', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({"role": roleName})
+            });
+            let data = await res.json();
+            document.getElementById('profileLabel').innerText = `[Profile: ${roleName}]`;
+            logConsole(`[AUTH_SET] System user execution contexts restricted to tier: ${roleName}`, "info");
+        }
+
+        // 5. DATA INGRESTION ENGINE SWAP
+        async function triggerModeSwap() {
+            let res = await fetch('http://localhost:5000/api/system/mode', {method: 'POST'});
+            let data = await res.json();
+            logConsole(`[HOT_SWAP] Execution tracking runtime targets flipped to pipeline structural node: ${data.new_mode}`, "success");
+        }
+
+        // 6. FETCH AI REGRESSION DATATABLES
+        async function fetchForecastData() {
+            let res = await fetch('http://localhost:5000/api/ai/forecast');
+            let data = await res.json();
+            let body = document.getElementById('forecastBody');
+            body.innerHTML = "";
+            data.forEach(row => {
+                body.innerHTML += `<tr><td><b>${row.date}</b></td><td>${row.sky}</td><td style="color:var(--accent-gold); font-weight:bold;">${row.yield}</td></tr>`;
+            });
+            logConsole("[AI_FETCH] Loaded predictive cloud mapping parameters datasets successfully.", "info");
+        }
+
+        function logConsole(msg, type) {
+            let box = document.getElementById('termBox');
+            let time = new Date().toLocaleTimeString();
+            let col = "#00ff00";
+            if(type === 'danger') col = "#f44336";
+            if(type === 'info') col = "#29b6f6";
+            box.innerHTML += `<br><span style="color:${col}">[${time}] ${msg}</span>`;
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
