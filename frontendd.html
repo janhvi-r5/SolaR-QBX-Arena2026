@@ -172,7 +172,7 @@
         // 2. FETCH LIVE DATA LOOP (Pulls from Python Flask every 2 seconds)
         setInterval(async () => {
             try {
-                let res = await fetch('http://127.0.0.1:5000/api/telementry');
+                let res = await fetch('http://127.0.0.1:5000/api/telemetry');
                 let data = await res.json();
 
                 // Inject UI values dynamically
@@ -207,7 +207,7 @@
         // 3. TRIGGER RELAY COMMAND POST REQUEST
         async function pressRelay(relayId) {
             try {
-                let res = await fetch('http://127.0.0.1:5000/api/telementry', {
+                let res = await fetch('http://127.0.0.1:5000/api/telemetry', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({"relay_id": relayId})
@@ -224,7 +224,7 @@
 
         // 4. CHANGE ROLE PROFILE
         async function setBackendRole(roleName) {
-            let res = await fetch('http://127.0.0.1:5000/api/telementry', {
+            let res = await fetch('http://127.0.0.1:5000/api/telemetry', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({"role": roleName})
@@ -236,7 +236,7 @@
 
         // 5. DATA INGRESTION ENGINE SWAP
         async function triggerModeSwap() {
-            let res = await fetch('http://127.0.0.1:5000/api/telementry', {method: 'POST'});
+            let res = await fetch('http://127.0.0.1:5000/api/telemetry', {method: 'POST'});
             let data = await res.json();
             logConsole(`[HOT_SWAP] Execution tracking runtime targets flipped to pipeline structural node: ${data.new_mode}`, "success");
         }
