@@ -172,7 +172,7 @@
         // 2. FETCH LIVE DATA LOOP (Pulls from Python Flask every 2 seconds)
         setInterval(async () => {
             try {
-                let res = await fetch('http://localhost:5000/api/telemetry');
+                let res = await fetch('http://127.0.0.1:5000/api/telementry');
                 let data = await res.json();
 
                 // Inject UI values dynamically
@@ -207,7 +207,7 @@
         // 3. TRIGGER RELAY COMMAND POST REQUEST
         async function pressRelay(relayId) {
             try {
-                let res = await fetch('http://localhost:5000/api/relay/toggle', {
+                let res = await fetch('http://127.0.0.1:5000/api/telementry', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({"relay_id": relayId})
@@ -224,7 +224,7 @@
 
         // 4. CHANGE ROLE PROFILE
         async function setBackendRole(roleName) {
-            let res = await fetch('http://localhost:5000/api/system/role', {
+            let res = await fetch('http://127.0.0.1:5000/api/telementry', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({"role": roleName})
@@ -236,14 +236,14 @@
 
         // 5. DATA INGRESTION ENGINE SWAP
         async function triggerModeSwap() {
-            let res = await fetch('http://localhost:5000/api/system/mode', {method: 'POST'});
+            let res = await fetch('http://127.0.0.1:5000/api/telementry', {method: 'POST'});
             let data = await res.json();
             logConsole(`[HOT_SWAP] Execution tracking runtime targets flipped to pipeline structural node: ${data.new_mode}`, "success");
         }
 
         // 6. FETCH AI REGRESSION DATATABLES
         async function fetchForecastData() {
-            let res = await fetch('http://localhost:5000/api/ai/forecast');
+            let res = await fetch('/api/telementry');
             let data = await res.json();
             let body = document.getElementById('forecastBody');
             body.innerHTML = "";
